@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os.path
 from abc import ABC, abstractmethod
 from tkinter import filedialog
 from tkinter import messagebox
@@ -31,7 +32,7 @@ class Exporter(ABC):
     def export(self) -> str:
         filename = self.ask_filename_and_location()
         if filename:
-            d = self.create_file_content(filename)
+            d = self.create_file_content(os.path.basename(filename))
             with open(filename, "w") as outfile:
                 json.dump(d, outfile, indent=4)
             messagebox.showinfo("Info", "Project saved successfully")

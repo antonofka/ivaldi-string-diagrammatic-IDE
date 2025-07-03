@@ -1,24 +1,26 @@
-# Ivaldi
+# *Ivaldi*
 
 
 ## Description
-Ivaldi is an application for working with string diagrams. It also allows the user to create domain-specific languages.
+*Ivaldi* is an application for working with string diagrams. It is specifically focused on string diagrams. It allows
+creation of them, saving of them and sharing. It's also possible to save the created diagrams as a PNG or as TikZ code 
+LaTeX files. Currently, it has features that allow using it to program in Python as well.
 
 ## Usage
-To use this application you have to do the following:
+To use this application you need python 3.13.
+The instructions to use the application as specified below.
     
     1. Clone this repository.
-    2. Open it with an IDE of your choice that can run Python files.
-    3. After this open a terminal in the repository and use the following command "pip install -r requirements.txt".
-    4. Go to ivaldi->MVP->refactored->launcher.py and run the file.
-
-## Roadmap
-TBD
+    2. Navigate to the repository. 
+    3. Run "pip install -r requirements.txt".
+    4. Run ivaldi/MVP/refactored/launcher.py and the application should launch.
 
 ## Authors and acknowledgment
 Project was initially started by Peeter Maran and Anton Osvald Kuusk and then given to us.
 
 Authors:
-    
     Mark Dzotsenidze
     Markus Vrager
+    Andrei Mjastsov
+    Nikita Semõnin
+    Timofei Beresnjev

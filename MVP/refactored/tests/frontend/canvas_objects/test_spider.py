@@ -2,13 +2,14 @@ import tkinter
 import unittest
 from unittest.mock import patch
 
+import constants as const
 from MVP.refactored.backend.diagram_callback import Receiver
 from MVP.refactored.frontend.canvas_objects.box import Box
 from MVP.refactored.frontend.canvas_objects.connection import Connection
+from MVP.refactored.frontend.canvas_objects.spider import Spider
 from MVP.refactored.frontend.canvas_objects.types.connection_type import ConnectionType
 from MVP.refactored.frontend.canvas_objects.wire import Wire
 from MVP.refactored.frontend.windows.main_diagram import MainDiagram
-from MVP.refactored.frontend.canvas_objects.spider import Spider
 
 
 class TestMainDiagram(unittest.TestCase):
@@ -28,13 +29,13 @@ class TestMainDiagram(unittest.TestCase):
 class SpiderTests(TestMainDiagram):
 
     def test__init__values(self):
-        spider = Spider(None, 0, "spider", (100, 150), self.custom_canvas, self.app.receiver)
+        spider = Spider((100, 150), self.custom_canvas)
 
         self.assertEqual(self.custom_canvas, spider.canvas)
         self.assertEqual(100, spider.x)
         self.assertEqual(150, spider.y)
         self.assertEqual(10, spider.r)
-        self.assertEqual((100, 150), spider.location)
+        self.assertEqual([100, 150], spider.location)
 
         self.assertTrue(isinstance(spider.connections, list))
         self.assertListEqual([], spider.wires)
@@ -42,13 +43,13 @@ class SpiderTests(TestMainDiagram):
         self.assertFalse(spider.is_snapped)
 
     def test__is_spider__returns_true(self):
-        spider = Spider(None, 0, "spider", (100, 150), self.custom_canvas, self.app.receiver)
+        spider = Spider((100, 150), self.custom_canvas)
 
         self.assertTrue(spider.is_spider())
 
     @patch("MVP.refactored.frontend.components.custom_canvas.CustomCanvas.tag_bind")
     def test__bind_events__callouts(self, tag_bind_mock):
-        spider = Spider(None, 0, "spider", (100, 150), self.custom_canvas, self.app.receiver)
+        spider = Spider((100, 150), self.custom_canvas)
         tag_bind_mock.call_count = 0
 
         spider.bind_events()
@@ -60,7 +61,7 @@ class SpiderTests(TestMainDiagram):
     @patch("tkinter.Menu.tk_popup")
     @patch("MVP.refactored.frontend.canvas_objects.spider.Spider.close_menu")
     def test__show_context_menu__callouts(self, close_menu_mock, tk_popup_mock, add_command_mock, type_choice_mock):
-        spider = Spider(None, 0, "spider", (100, 150), self.custom_canvas, self.app.receiver)
+        spider = Spider((100, 150), self.custom_canvas)
         event = tkinter.Event()
         event.x_root = 100
         event.y_root = 150
@@ -73,49 +74,49 @@ class SpiderTests(TestMainDiagram):
         self.assertEqual(2, add_command_mock.call_count)
 
     @patch("MVP.refactored.backend.diagram_callback.Receiver.receiver_callback")
-    def test__delete_spider__calls_receiver_if_sub_diagram(self, receiver_mock):
-        spider = Spider(None, 0, "spider", (100, 150), self.custom_canvas, self.app.receiver)
+    def test__delete__calls_receiver_if_sub_diagram(self, receiver_mock):
+        spider = Spider((100, 150), self.custom_canvas)
         self.custom_canvas.spiders.append(spider)
 
-        spider.delete_spider(action="sub_diagram")
+        spider.delete(action="sub_diagram")
 
         self.assertTrue(receiver_mock.called)
 
     @patch("MVP.refactored.frontend.canvas_objects.spider.Spider.delete")
-    def test__delete_spider__calls_delete_function(self, delete_mock):
-        spider = Spider(None, 0, "spider", (100, 150), self.custom_canvas, self.app.receiver)
+    def test__delete__calls_delete_function(self, delete_mock):
+        spider = Spider((100, 150), self.custom_canvas)
         self.custom_canvas.spiders.append(spider)
 
-        spider.delete_spider()
+        spider.delete()
         self.assertTrue(delete_mock.called)
 
-    def test__delete_spider__removes_spider_from_canvas_list(self):
-        spider = Spider(None, 0, "spider", (100, 150), self.custom_canvas, self.app.receiver)
+    def test__delete__removes_spider_from_canvas_list(self):
+        spider = Spider((100, 150), self.custom_canvas)
         self.custom_canvas.spiders.append(spider)
 
-        spider.delete_spider()
+        spider.delete()
 
         self.assertFalse(self.custom_canvas.spiders)
 
     @patch("tkinter.Menu.destroy")
     def test__close_menu__doesnt_close_if_no_menu(self, destroy_mock):
-        spider = Spider(None, 0, "spider", (100, 150), self.custom_canvas, self.app.receiver)
+        spider = Spider((100, 150), self.custom_canvas)
         spider.context_menu = None
         spider.close_menu()
         self.assertFalse(destroy_mock.called)
 
     @patch("tkinter.Menu.destroy")
     def test__close_menu__closes_if_menu(self, destroy_mock):
-        spider = Spider(None, 0, "spider", (100, 150), self.custom_canvas, self.app.receiver)
+        spider = Spider((100, 150), self.custom_canvas)
         spider.context_menu = tkinter.Menu()
         spider.close_menu()
         self.assertTrue(destroy_mock.called)
 
     def test__add_wire__adds_wire(self):
-        spider = Spider(None, 0, "spider", (100, 150), self.custom_canvas, self.app.receiver)
-        wire1 = Wire(None, None, self.app.receiver, None, temporary=True)
-        wire2 = Wire(None, None, self.app.receiver, None, temporary=True)
-        wire3 = Wire(None, None, self.app.receiver, None, temporary=True)
+        spider = Spider((100, 150), self.custom_canvas)
+        wire1 = Wire(self.custom_canvas, None, None, is_temporary=True)
+        wire2 = Wire(self.custom_canvas, None, None, is_temporary=True)
+        wire3 = Wire(self.custom_canvas, None, None, is_temporary=True)
 
         spider.add_wire(wire1)
         spider.add_wire(wire2)
@@ -124,8 +125,8 @@ class SpiderTests(TestMainDiagram):
         self.assertEqual([wire1, wire2, wire3], spider.wires)
 
     def test__add_wire__doesnt_add_wire_if_wire_in_spider_already(self):
-        spider = Spider(None, 0, "spider", (100, 150), self.custom_canvas, self.app.receiver)
-        wire1 = Wire(None, None, self.app.receiver, None, temporary=True)
+        spider = Spider((100, 150), self.custom_canvas)
+        wire1 = Wire(self.custom_canvas, None, None, is_temporary=True)
 
         spider.add_wire(wire1)
         spider.add_wire(wire1)
@@ -133,8 +134,8 @@ class SpiderTests(TestMainDiagram):
         self.assertEqual([wire1], spider.wires)
 
     def test__on_press__clears_all_selections(self):
-        spider = Spider(None, 0, "spider", (100, 150), self.custom_canvas, self.app.receiver)
-        random_item = Box(self.custom_canvas, 100, 100, self.app.receiver)
+        spider = Spider((100, 150), self.custom_canvas)
+        random_item = Box(self.custom_canvas, 100, 100)
         self.custom_canvas.selector.selected_items.append(random_item)
         self.custom_canvas.selector.selected_boxes.append(random_item)
         self.custom_canvas.selector.selected_wires.append(random_item)
@@ -148,9 +149,9 @@ class SpiderTests(TestMainDiagram):
         self.assertFalse(self.custom_canvas.selector.selected_wires)
 
     def test__on_press__does_not_select_self_if_drawing_wire(self):
-        spider = Spider(None, 0, "spider", (100, 150), self.custom_canvas, self.app.receiver)
+        spider = Spider((100, 150), self.custom_canvas)
 
-        random_item = Box(self.custom_canvas, 100, 100, self.app.receiver)
+        random_item = Box(self.custom_canvas, 100, 100)
         self.custom_canvas.selector.selected_items.append(random_item)
         self.custom_canvas.selector.selected_boxes.append(random_item)
         self.custom_canvas.selector.selected_wires.append(random_item)
@@ -163,7 +164,7 @@ class SpiderTests(TestMainDiagram):
 
     @patch("MVP.refactored.frontend.canvas_objects.spider.Spider.select")
     def test__on_control_press__selects_self(self, select_mock):
-        spider = Spider(None, 0, "spider", (100, 150), self.custom_canvas, self.app.receiver)
+        spider = Spider((100, 150), self.custom_canvas)
 
         spider.on_control_press()
 
@@ -171,7 +172,7 @@ class SpiderTests(TestMainDiagram):
         self.assertTrue(select_mock.called)
 
     def test__on_control_press__deselects_self_if_selected(self):
-        spider = Spider(None, 0, "spider", (100, 150), self.custom_canvas, self.app.receiver)
+        spider = Spider((100, 150), self.custom_canvas)
 
         self.custom_canvas.selector.selected_items.append(spider)
 
@@ -180,8 +181,8 @@ class SpiderTests(TestMainDiagram):
         self.assertFalse(self.custom_canvas.selector.selected_items)
 
     def test__on_control_press__selects_wires_between(self):
-        spider1 = Spider(None, 0, "spider", (100, 150), self.custom_canvas, self.app.receiver)
-        spider2 = Spider(None, 0, "spider", (200, 150), self.custom_canvas, self.app.receiver)
+        spider1 = Spider((100, 150), self.custom_canvas)
+        spider2 = Spider((200, 150), self.custom_canvas)
 
         self.custom_canvas.start_wire_from_connection(spider1)
         self.custom_canvas.end_wire_to_connection(spider2)
@@ -192,7 +193,7 @@ class SpiderTests(TestMainDiagram):
         self.assertEqual(3, len(self.custom_canvas.selector.selected_items))
 
     def test__on_drag__no_other_items_changes_location(self):
-        spider = Spider(None, 0, "spider", (100, 150), self.custom_canvas, self.app.receiver)
+        spider = Spider((100, 150), self.custom_canvas)
         event = tkinter.Event()
         event.state = False
         event.x = 100
@@ -311,7 +312,7 @@ class SpiderTests(TestMainDiagram):
         self.assertEqual(expected, spider.y)
 
     def test__on_drag__doesnt_change_loc_if_pulling_wire(self):
-        spider = Spider(None, 0, "spider", (100, 150), self.custom_canvas, self.app.receiver)
+        spider = Spider((100, 150), self.custom_canvas)
         self.custom_canvas.pulling_wire = True
         event = tkinter.Event()
         event.state = False
@@ -329,8 +330,8 @@ class SpiderTests(TestMainDiagram):
         self.assertEqual(150, spider.y)
 
     def test__remove_wire__removes_wire(self):
-        spider = Spider(None, 0, "spider", (100, 150), self.custom_canvas, self.app.receiver)
-        wire = Wire(self.custom_canvas, None, self.app.receiver, None, temporary=True)
+        spider = Spider((100, 150), self.custom_canvas)
+        wire = Wire(self.custom_canvas, None, None, is_temporary=True)
 
         spider.add_wire(wire)
 
@@ -341,9 +342,9 @@ class SpiderTests(TestMainDiagram):
         self.assertTrue(wire not in spider.wires)
 
     def test__is_illegal_move__can_be_next_to_connected_connection(self):
-        spider = Spider(None, 0, "spider", (100, 100), self.custom_canvas, self.app.receiver)
-        spider2 = Spider(None, 1, "spider", (150, 100), self.custom_canvas, self.app.receiver)
-        wire = Wire(self.custom_canvas, spider, self.app.receiver, spider2, temporary=True)
+        spider = Spider((100, 100), self.custom_canvas)
+        spider2 = Spider((150, 100), self.custom_canvas)
+        wire = Wire(self.custom_canvas, spider, spider2, is_temporary=True)
 
         spider.add_wire(wire)
         spider2.add_wire(wire)
@@ -351,9 +352,9 @@ class SpiderTests(TestMainDiagram):
         self.assertFalse(spider.is_illegal_move(125))
 
     def test__is_illegal_move__cant_be_same_x_with_connected_spider(self):
-        spider = Spider(None, 0, "spider", (100, 100), self.custom_canvas, self.app.receiver)
-        spider2 = Spider(None, 1, "spider", (150, 100), self.custom_canvas, self.app.receiver)
-        wire = Wire(self.custom_canvas, spider, self.app.receiver, spider2, temporary=True)
+        spider = Spider((100, 100), self.custom_canvas)
+        spider2 = Spider((150, 100), self.custom_canvas)
+        wire = Wire(self.custom_canvas, spider, spider2, is_temporary=True)
 
         spider.add_wire(wire)
         spider2.add_wire(wire)
@@ -363,9 +364,9 @@ class SpiderTests(TestMainDiagram):
         self.assertTrue(spider.is_illegal_move(155))
 
     def test__is_illegal_move__cant_go_from_left_to_right_with_connected_connection(self):
-        spider = Spider(None, 0, "spider", (100, 100), self.custom_canvas, self.app.receiver)
+        spider = Spider((100, 100), self.custom_canvas)
         connection = Connection(None, 1, "left", (150, 150), self.custom_canvas)
-        wire = Wire(self.custom_canvas, spider, self.app.receiver, connection, temporary=True)
+        wire = Wire(self.custom_canvas, spider, connection, is_temporary=True)
 
         spider.add_wire(wire)
 
@@ -375,9 +376,9 @@ class SpiderTests(TestMainDiagram):
             self.assertTrue(spider.is_illegal_move(x))
 
     def test__is_illegal_move__cant_go_from_right_to_left_with_connected_connection(self):
-        spider = Spider(None, 0, "spider", (150, 150), self.custom_canvas, self.app.receiver)
+        spider = Spider((150, 150), self.custom_canvas)
         connection = Connection(None, 1, "right", (100, 100), self.custom_canvas)
-        wire = Wire(self.custom_canvas, spider, self.app.receiver, connection, temporary=True)
+        wire = Wire(self.custom_canvas, spider, connection, is_temporary=True)
 
         spider.add_wire(wire)
 

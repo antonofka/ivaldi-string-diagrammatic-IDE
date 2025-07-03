@@ -1,11 +1,12 @@
 import json
+import re
 import time
 from tkinter import messagebox
+from pathlib import Path
 
+import constants as const
 from MVP.refactored.frontend.canvas_objects.connection import Connection
 from MVP.refactored.frontend.canvas_objects.wire import Wire
-from constants import *
-
 from MVP.refactored.util.exporter.exporter import Exporter
 
 
@@ -33,7 +34,9 @@ class ProjectExporter(Exporter):
         return {"boxes": self.create_boxes_list(canvas),
                 "spiders": self.create_spiders_list(canvas),
                 "io": self.create_io_dict(canvas),
-                "wires": self.create_wires_list(canvas)}
+                "wires": self.create_wires_list(canvas),
+                "rotation": canvas.rotation
+                }
 
     def create_wires_list(self, canvas):
         return [{"id": wire.id,
@@ -68,12 +71,12 @@ class ProjectExporter(Exporter):
                 "id": box.id,
                 "x": box.x,
                 "y": box.y,
-                "size": box.size,
+                "size": box.get_logical_size(box.size),
                 "label": box.label_text,
                 "connections": self.get_connections(box.connections),
                 "sub_diagram": None,
                 "locked": box.locked,
-                "shape": box.shape
+                "shape": box.style
             }
             if box.sub_diagram:
                 d["sub_diagram"] = self.create_canvas_dict(box.sub_diagram)
@@ -127,20 +130,20 @@ class ProjectExporter(Exporter):
             "right_c": right_connections,
             "left_c_types": left_con_types,
             "right_c_types": right_con_types,
-            "shape": box.shape,
+            "shape": box.style,
             "sub_diagram": None,
         }
         if box.sub_diagram:
             new_entry["sub_diagram"] = self.create_canvas_dict(box.sub_diagram)
         current[box.label_text] = new_entry
 
-        with open(BOXES_CONF, "w") as outfile:
+        with open(const.BOXES_CONF, "w") as outfile:
             json.dump(current, outfile, indent=4)
 
     @staticmethod
     def get_current_data():
         try:
-            with open(BOXES_CONF, 'r') as json_file:
+            with open(const.BOXES_CONF, 'r') as json_file:
                 data = json.load(json_file)
                 return data
         except FileNotFoundError or IOError or json.JSONDecodeError:
@@ -149,5 +152,5 @@ class ProjectExporter(Exporter):
     def del_box_menu_option(self, box):
         current = self.get_current_data()
         current.pop(box)
-        with open(BOXES_CONF, "w") as outfile:
+        with open(const.BOXES_CONF, "w") as outfile:
             json.dump(current, outfile, indent=4)

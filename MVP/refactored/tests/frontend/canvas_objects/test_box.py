@@ -2,9 +2,10 @@ import tkinter
 import unittest
 from unittest.mock import patch
 
+import constants as const
 from MVP.refactored.backend.diagram_callback import Receiver
-from MVP.refactored.frontend.windows.main_diagram import MainDiagram
 from MVP.refactored.frontend.canvas_objects.box import Box
+from MVP.refactored.frontend.windows.main_diagram import MainDiagram
 
 
 class TestMainDiagram(unittest.TestCase):
@@ -29,12 +30,12 @@ class BoxTests(TestMainDiagram):
         expected_width = 100
         expected_height = 125
 
-        box = Box(self.custom_canvas, expected_x, expected_y, self.app.receiver, size=(expected_width, expected_height))
+        box = Box(self.custom_canvas, expected_x, expected_y, size=(expected_width, expected_height))
 
         self.assertEqual(expected_x, box.x)
         self.assertEqual(expected_y, box.y)
 
-        self.assertEqual((expected_width, expected_height), box.size)
+        self.assertEqual([expected_width, expected_height], box.size)
 
         self.assertListEqual([], box.connections)
 
@@ -46,9 +47,7 @@ class BoxTests(TestMainDiagram):
         self.assertFalse(box.label_text)
         self.assertListEqual([], box.wires)
 
-        self.assertIsNone(box.node)
-
-        self.assertTrue(isinstance(box.context_menu, tkinter.Menu))
+        self.assertIsNone(box.context_menu)
 
         self.assertFalse(False, box.locked)
 
@@ -61,20 +60,21 @@ class BoxTests(TestMainDiagram):
         self.assertEqual(0, box.x_dif)
         self.assertEqual(0, box.y_dif)
 
-    @patch("MVP.refactored.frontend.canvas_objects.box.Box.update_position")
+    @patch("tkinter.Canvas.tag_bind")
+    @patch("MVP.refactored.frontend.canvas_objects.box.Box.update_box")
     @patch("MVP.refactored.frontend.canvas_objects.box.Box.update_connections")
     @patch("MVP.refactored.frontend.canvas_objects.box.Box.update_wires")
-    def test__update_size__changes_size(self, mock, mock2, mock3):
-        box = Box(self.custom_canvas, 100, 100, self.app.receiver)
-        expected_size = (100, 100)
+    def test__update_size__changes_size(self, update_wires_mock, update_connections_mock, update_box_mock, tag_bind_mock):
+        box = Box(self.custom_canvas, 100, 100)
+        expected_size = [100, 100]
         box.update_size(expected_size[0], expected_size[1])
         self.assertEqual(expected_size, box.size)
-        self.assertTrue(mock.called)
-        self.assertTrue(mock2.called)
-        self.assertTrue(mock3.called)
+        self.assertTrue(update_wires_mock.called)
+        self.assertTrue(update_connections_mock.called)
+        self.assertTrue(update_box_mock.called)
 
     def test__add_left_connection__adds_connection(self):
-        box = Box(self.custom_canvas, 100, 100, self.app.receiver)
+        box = Box(self.custom_canvas, 100, 100)
         box.add_left_connection()
 
         self.assertEqual(1, len(box.connections))
@@ -88,7 +88,7 @@ class BoxTests(TestMainDiagram):
                                                        resize_by_connections_mock,
                                                        update_wires_mock,
                                                        update_connections_mock):
-        box = Box(self.custom_canvas, 100, 100, self.app.receiver)
+        box = Box(self.custom_canvas, 100, 100)
         box.add_left_connection()
 
         self.assertTrue(resize_by_connections_mock.called)
@@ -96,7 +96,7 @@ class BoxTests(TestMainDiagram):
         self.assertTrue(update_connections_mock.called)
 
     def test__add_right_connection__adds_connection(self):
-        box = Box(self.custom_canvas, 100, 100, self.app.receiver)
+        box = Box(self.custom_canvas, 100, 100)
         box.add_right_connection()
 
         self.assertEqual(1, len(box.connections))
@@ -110,7 +110,7 @@ class BoxTests(TestMainDiagram):
                                                         resize_by_connections_mock,
                                                         update_wires_mock,
                                                         update_connections_mock):
-        box = Box(self.custom_canvas, 100, 100, self.app.receiver)
+        box = Box(self.custom_canvas, 100, 100)
         box.add_right_connection()
 
         self.assertTrue(resize_by_connections_mock.called)
@@ -118,47 +118,47 @@ class BoxTests(TestMainDiagram):
         self.assertTrue(update_connections_mock.called)
 
     def test__lock_box__turns_locked_to_true(self):
-        box = Box(self.custom_canvas, 100, 100, self.app.receiver)
+        box = Box(self.custom_canvas, 100, 100)
         self.assertFalse(box.locked)
 
         box.lock_box()
         self.assertTrue(box.locked)
 
     def test__unlock_box__turns_locked_to_false(self):
-        box = Box(self.custom_canvas, 100, 100, self.app.receiver)
+        box = Box(self.custom_canvas, 100, 100)
         box.lock_box()
         self.assertTrue(box.locked)
 
         box.unlock_box()
         self.assertFalse(box.locked)
 
-    def test__select__turns_rect_outline_green(self):
-        box = Box(self.custom_canvas, 100, 100, self.app.receiver)
+    def test__select__turns_rect_outline_select_color(self):
+        box = Box(self.custom_canvas, 100, 100)
 
-        expected_start_color = "black"
-        actual_start_color = self.custom_canvas.itemconfig(box.rect)["outline"][-1]
+        expected_start_color = const.BLACK
+        actual_start_color = self.custom_canvas.itemconfig(box.shape)["outline"][-1]
         self.assertEqual(expected_start_color, actual_start_color)
 
         box.select()
-        expected_selected_color = "green"
-        actual_selected_color = self.custom_canvas.itemconfig(box.rect)["outline"][-1]
+        expected_selected_color = const.SELECT_COLOR
+        actual_selected_color = self.custom_canvas.itemconfig(box.shape)["outline"][-1]
         self.assertEqual(expected_selected_color, actual_selected_color)
 
     def test__deselect__turns_rect_outline_black(self):
-        box = Box(self.custom_canvas, 100, 100, self.app.receiver)
+        box = Box(self.custom_canvas, 100, 100)
 
         box.select()
-        expected_selected_color = "green"
-        actual_selected_color = self.custom_canvas.itemconfig(box.rect)["outline"][-1]
+        expected_selected_color = const.SELECT_COLOR
+        actual_selected_color = self.custom_canvas.itemconfig(box.shape)["outline"][-1]
         self.assertEqual(expected_selected_color, actual_selected_color)
 
         box.deselect()
-        expected_start_color = "black"
-        actual_start_color = self.custom_canvas.itemconfig(box.rect)["outline"][-1]
+        expected_start_color = const.BLACK
+        actual_start_color = self.custom_canvas.itemconfig(box.shape)["outline"][-1]
         self.assertEqual(expected_start_color, actual_start_color)
 
     def test__move__updates_x_y(self):
-        box = Box(self.custom_canvas, 100, 100, self.app.receiver)
+        box = Box(self.custom_canvas, 100, 100)
         self.assertEqual((100, 100), (box.x, box.y))
 
         expected_x = 500
@@ -166,20 +166,22 @@ class BoxTests(TestMainDiagram):
         box.move(expected_x, expected_y)
         self.assertEqual((expected_x, expected_y), (box.x, box.y))
 
-    @patch("MVP.refactored.frontend.canvas_objects.box.Box.update_position")
+    @patch("tkinter.Canvas.tag_bind")
+    @patch("MVP.refactored.frontend.canvas_objects.box.Box.update_box")
     @patch("MVP.refactored.frontend.canvas_objects.box.Box.update_connections")
     @patch("MVP.refactored.frontend.canvas_objects.box.Box.update_wires")
-    def test__move__calls_out_methods(self, update_wires_mock, update_connections_mock, update_position_mock):
-        box = Box(self.custom_canvas, 100, 100, self.app.receiver)
+    def test__move__calls_out_methods(self, update_wires_mock, update_connections_mock, update_box_mock, tag_bind_mock):
+        box = Box(self.custom_canvas, 100, 100)
+        self.assertTrue(tag_bind_mock.called)
         box.move(100, 100)
 
         self.assertTrue(update_wires_mock.called)
         self.assertTrue(update_connections_mock.called)
-        self.assertTrue(update_position_mock.called)
+        self.assertTrue(update_box_mock.called)
 
     @patch("MVP.refactored.frontend.canvas_objects.box.Box.is_illegal_move")
     def test__move__checks_for_illegal_move_when_connections_with_wire_exist(self, is_illegal_move_mock):
-        box = Box(self.custom_canvas, 100, 100, self.app.receiver)
+        box = Box(self.custom_canvas, 100, 100)
         box.add_left_connection()
         box.connections[0].has_wire = True
 
@@ -188,7 +190,7 @@ class BoxTests(TestMainDiagram):
 
     @patch("MVP.refactored.frontend.canvas_objects.box.Box.is_illegal_move", return_value=True)
     def test__move__if_illegal_doesnt_change_x(self, is_illegal_move_mock):
-        box = Box(self.custom_canvas, 100, 100, self.app.receiver)
+        box = Box(self.custom_canvas, 100, 100)
         box.add_left_connection()
         box.connections[0].has_wire = True
 
@@ -199,7 +201,7 @@ class BoxTests(TestMainDiagram):
 
     @patch("tkinter.simpledialog.askstring", return_value="1")
     def test__set_inputs_outputs__asks_user_for_input(self, ask_string_mock):
-        box = Box(self.custom_canvas, 100, 100, self.app.receiver)
+        box = Box(self.custom_canvas, 100, 100)
         box.set_inputs_outputs()
 
         self.assertTrue(ask_string_mock.called)
@@ -207,7 +209,7 @@ class BoxTests(TestMainDiagram):
 
     @patch("tkinter.simpledialog.askstring", return_value="2")
     def test__set_inputs_outputs__removes_outputs_if_needed(self, ask_string_mock):
-        box = Box(self.custom_canvas, 100, 100, self.app.receiver)
+        box = Box(self.custom_canvas, 100, 100)
         for i in range(3):
             box.add_left_connection()
             box.add_right_connection()
@@ -224,22 +226,22 @@ class BoxTests(TestMainDiagram):
         self.assertEqual(2, box.right_connections)
 
     @patch("MVP.refactored.frontend.canvas_objects.box.Box.bind_event_label")
-    @patch("MVP.refactored.frontend.canvas_objects.box.Box.change_label")
-    def test__edit_label__with_param_changes_label(self, change_label_mock, bind_mock):
-        box = Box(self.custom_canvas, 100, 100, self.app.receiver)
+    @patch("MVP.refactored.frontend.canvas_objects.box.Box.update_label")
+    def test__edit_label__with_param_changes_label(self, update_label_mock, bind_mock):
+        box = Box(self.custom_canvas, 100, 100)
         bind_mock.call_count = 0  # resetting tag_bind amount from box creation
 
         expected_label = "new_label"
         box.edit_label(expected_label)
 
         self.assertEqual(expected_label, box.label_text)
-        self.assertTrue(change_label_mock.called)
+        self.assertTrue(update_label_mock.called)
         self.assertTrue(bind_mock.called)
 
     @patch("MVP.refactored.frontend.canvas_objects.box.Box.bind_event_label")
     @patch("tkinter.simpledialog.askstring", return_value="new_label")
     def test__edit_label__without_param_asks_input(self, ask_string_mock, bind_mock):
-        box = Box(self.custom_canvas, 100, 100, self.app.receiver)
+        box = Box(self.custom_canvas, 100, 100)
         bind_mock.call_count = 0
         box.edit_label()
 
@@ -261,7 +263,7 @@ class BoxTests(TestMainDiagram):
                                                                     ask_ok_cancel_mock,
                                                                     update_io_mock,
                                                                     bind_event_mock):
-        box = Box(self.custom_canvas, 100, 100, self.app.receiver)
+        box = Box(self.custom_canvas, 100, 100)
         bind_event_mock.call_count = 0
         os_stat_mock.return_value.st_size = 1
         box.edit_label()
@@ -277,14 +279,14 @@ class BoxTests(TestMainDiagram):
 
     @patch("MVP.refactored.frontend.components.custom_canvas.CustomCanvas.tag_bind")
     def test__bind_events__calls_tag_bind(self, tag_bind_mock):
-        box = Box(self.custom_canvas, 100, 100, self.app.receiver)
+        box = Box(self.custom_canvas, 100, 100)
         tag_bind_mock.call_count = 0
         box.bind_events()
         self.assertEqual(11, tag_bind_mock.call_count)
 
     @patch("MVP.refactored.frontend.components.custom_canvas.CustomCanvas.tag_bind")
     def test__bind_event_label__calls_out_tag_bind(self, tag_bind_mock):
-        box = Box(self.custom_canvas, 100, 100, self.app.receiver)
+        box = Box(self.custom_canvas, 100, 100)
         tag_bind_mock.call_count = 0
         box.bind_event_label()
 
@@ -292,7 +294,7 @@ class BoxTests(TestMainDiagram):
 
     @patch("MVP.refactored.frontend.canvas_objects.box.Box.bind_events")
     def test__init__calls_bind_event(self, bind_events_mock):
-        box = Box(self.custom_canvas, 100, 100, self.app.receiver)
+        box = Box(self.custom_canvas, 100, 100)
         self.assertTrue(bind_events_mock.called)
 
     @patch("tkinter.Menu.add_command")
@@ -308,13 +310,13 @@ class BoxTests(TestMainDiagram):
                                              entry_config_mock,
                                              add_cascade_mock,
                                              add_command_mock):
-        box = Box(self.custom_canvas, 100, 100, self.app.receiver)
+        box = Box(self.custom_canvas, 100, 100)
         event = tkinter.Event()
         event.x_root, event.y_root = 100, 100
         box.show_context_menu(event)
 
         self.assertEqual(1, close_menu_mock.call_count)
-        self.assertEqual(12, add_command_mock.call_count)
+        self.assertEqual(15, add_command_mock.call_count)
         self.assertEqual(1, entry_config_mock.call_count)
         self.assertEqual(1, add_separator_mock.call_count)
         self.assertEqual(1, add_cascade_mock.call_count)
@@ -333,7 +335,7 @@ class BoxTests(TestMainDiagram):
                                                               entry_config_mock,
                                                               add_cascade_mock,
                                                               add_command_mock):
-        box = Box(self.custom_canvas, 100, 100, self.app.receiver)
+        box = Box(self.custom_canvas, 100, 100)
         box.add_left_connection()
         box.add_right_connection()
         event = tkinter.Event()
@@ -341,7 +343,7 @@ class BoxTests(TestMainDiagram):
         box.show_context_menu(event)
 
         self.assertEqual(1, close_menu_mock.call_count)
-        self.assertEqual(14, add_command_mock.call_count)
+        self.assertEqual(17, add_command_mock.call_count)
         self.assertEqual(1, entry_config_mock.call_count)
         self.assertEqual(1, add_separator_mock.call_count)
         self.assertEqual(1, add_cascade_mock.call_count)
@@ -360,7 +362,7 @@ class BoxTests(TestMainDiagram):
                                             entry_config_mock,
                                             add_cascade_mock,
                                             add_command_mock):
-        box = Box(self.custom_canvas, 100, 100, self.app.receiver)
+        box = Box(self.custom_canvas, 100, 100)
         box.lock_box()
         event = tkinter.Event()
         event.x_root, event.y_root = 100, 100
@@ -386,7 +388,7 @@ class BoxTests(TestMainDiagram):
                                                             entry_config_mock,
                                                             add_cascade_mock,
                                                             add_command_mock):
-        box = Box(self.custom_canvas, 100, 100, self.app.receiver)
+        box = Box(self.custom_canvas, 100, 100)
         box.sub_diagram = True
         event = tkinter.Event()
         event.x_root, event.y_root = 100, 100
@@ -412,7 +414,7 @@ class BoxTests(TestMainDiagram):
                                                     entry_config_mock,
                                                     add_cascade_mock,
                                                     add_command_mock):
-        box = Box(self.custom_canvas, 100, 100, self.app.receiver)
+        box = Box(self.custom_canvas, 100, 100)
         box.sub_diagram = True
         box.lock_box()
         event = tkinter.Event()
@@ -428,7 +430,7 @@ class BoxTests(TestMainDiagram):
 
     @patch("MVP.refactored.frontend.windows.code_editor.CodeEditor.__init__", return_value=None)
     def test__open_editor__creates_editor(self, init_mock):
-        box = Box(self.custom_canvas, 100, 100, self.app.receiver)
+        box = Box(self.custom_canvas, 100, 100)
         box.open_editor()
 
         self.assertTrue(init_mock.called)
@@ -437,7 +439,7 @@ class BoxTests(TestMainDiagram):
     @patch("MVP.refactored.frontend.components.custom_canvas.CustomCanvas.canvasx", return_value=300)
     @patch("MVP.refactored.frontend.components.custom_canvas.CustomCanvas.canvasy", return_value=300)
     def test__on_press__callouts(self, canvas_y_mock, canvas_x_mock, select_mock):
-        box = Box(self.custom_canvas, 100, 100, self.app.receiver)
+        box = Box(self.custom_canvas, 100, 100)
         event = tkinter.Event()
         event.x = 300
         event.y = 300
@@ -449,9 +451,9 @@ class BoxTests(TestMainDiagram):
     @patch("MVP.refactored.frontend.components.custom_canvas.CustomCanvas.canvasx", return_value=300)
     @patch("MVP.refactored.frontend.components.custom_canvas.CustomCanvas.canvasy", return_value=400)
     def test__on_press__variable_changes(self, canvas_y_mock, canvas_x_mock):
-        box = Box(self.custom_canvas, 100, 100, self.app.receiver)
-        box.x = 100
-        box.y = 100
+        box = Box(self.custom_canvas, 100, 100)
+        box.display_x = 100
+        box.display_y = 100
         event = tkinter.Event()
         event.x = 300
         event.y = 400
@@ -467,7 +469,7 @@ class BoxTests(TestMainDiagram):
         self.assertEqual(400 - 100, box.y_dif)
 
     def test__on_drag__no_other_items_changes_location(self):
-        box = Box(self.custom_canvas, 100, 100, self.app.receiver)
+        box = Box(self.custom_canvas, 100, 100)
         event = tkinter.Event()
         event.state = False
         event.x = 150
@@ -598,7 +600,7 @@ class BoxTests(TestMainDiagram):
 
     @patch("MVP.refactored.frontend.canvas_objects.box.Box.move_label")
     def test__on_resize_drag__updates_size_same_coords(self, move_label_mock):
-        box = Box(self.custom_canvas, 100, 100, self.app.receiver)
+        box = Box(self.custom_canvas, 100, 100)
 
         event = tkinter.Event()
         event.state = False
@@ -611,5 +613,5 @@ class BoxTests(TestMainDiagram):
             event.y += 1
             box.on_resize_drag(event)
 
-        self.assertEqual((110, 110), box.size)
+        self.assertEqual([110, 110], box.size)
         self.assertEqual(50, move_label_mock.call_count)

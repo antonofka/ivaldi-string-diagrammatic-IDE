@@ -1,27 +1,81 @@
+from __future__ import annotations
+
+from MVP.refactored.backend.box_functions.box_function import BoxFunction
+from MVP.refactored.backend.types.GeneratorType import GeneratorType
+from MVP.refactored.backend.types.connection_side import ConnectionSide
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from MVP.refactored.backend.types.connection_info import ConnectionInfo
+
+
 class Generator:
-    def __init__(self, id):
-        self.id = id
-        self.type = 0  # 0-atomic 1-compound None-undefined
-        self.left = []
-        self.right = []
-        self.left_inner = []
-        self.right_inner = []
+    """Backend representation of frontend box."""
+
+    def __init__(self, generator_id):
+        self.id = generator_id
+        self.type: GeneratorType = GeneratorType.ATOMIC  # 0-atomic 1-compound None-undefined
+        self.left: list[ConnectionInfo] = []
+        self.right: list[ConnectionInfo] = []
+        self.left_inner: list[ConnectionInfo] = []
+        self.right_inner: list[ConnectionInfo] = []
+        self.sub_diagram_id: int = -1  # -1 if doesn't have
         self.subset = []
         self.parent = None
         self.spiders = []
         self.operand = None
+        self.label = ""
+        self.box_function: BoxFunction | None = None
 
-    def add_left(self, left):
-        self.left.append(left)
+    def get_sub_diagram_id(self):
+        """Returns -1 if no sub diagram is defined."""
+        return self.sub_diagram_id
 
-    def add_right(self, right):
-        self.right.append(right)
+    def set_sub_diagram_id(self, sub_diagram_id):
+        self.sub_diagram_id = sub_diagram_id
 
-    def add_left_inner(self, left):
-        self.left_inner.append(left)
+    def set_label(self, label):
+        self.label = label
 
-    def add_right_inner(self, right):
-        self.right_inner.append(right)
+    def get_label(self):
+        return self.label
+
+    def get_left_by_id(self, left_id: int):
+        for left in self.left:
+            if left.id == left_id:
+                return left
+
+    def get_right_by_id(self, right_id: int):
+        for right in self.right:
+            if right.id == right_id:
+                return right
+
+    def get_left(self) -> list[ConnectionInfo]:
+        return self.left
+
+    def get_right(self) -> list[ConnectionInfo]:
+        return self.right
+
+    def add_left(self, left: ConnectionInfo):
+        if left.side != ConnectionSide.SPIDER:  # because connection info with spider will always have the same id
+            if left not in self.left:
+                self.left.insert(left.index, left)
+        else:
+            self.left.insert(left.index, left)
+
+    def add_right(self, right: ConnectionInfo):
+        if right.side != ConnectionSide.SPIDER:  # because connection info with spider will always have the same id
+            if right not in self.right:
+                self.right.insert(right.index, right)
+        else:
+            self.right.insert(right.index, right)
+
+    def add_left_inner(self, left: ConnectionInfo):
+        self.left_inner.insert(left.index, left)
+
+    def add_right_inner(self, right: ConnectionInfo):
+        self.right_inner.insert(right.index, right)
 
     def add_operand(self, operand):
         self.operand = operand
@@ -29,47 +83,86 @@ class Generator:
     def remove_operand(self):
         self.operand = None
 
-    def add_type(self, type):
+    def set_id(self, new_id: int):
+        self.id = new_id
+
+    def set_type(self, type: GeneratorType):
         self.type = type
 
     def remove_type(self):
         self.type = None
 
     def remove_all_left(self):
-        self.left = []
+        for left in self.left:
+            left.set_box_id(None)
+        self.left.clear()
 
     def remove_all_right(self):
-        self.right = []
+        for right in self.right:
+            right.set_box_id(None)
+        self.right.clear()
 
-    def remove_left(self, connection=None):
-        self.left.pop(connection[0])
-        for i, resource in enumerate(self.left):
-            resource[0] = i
+    def remove_left(self, connection_id: int = None):
+        is_found_connection = False
+        to_be_removed: ConnectionInfo | None = None
+        for connection in self.left:
+            if connection.id == connection_id:
+                connection.set_box_id(None)
+                to_be_removed = connection
+                is_found_connection = True
+            elif is_found_connection:  # same as in Resource class
+                connection.index -= 1
+        if to_be_removed is not None:
+            self.left.remove(to_be_removed)
 
-    def remove_right(self, connection=None):
-        self.right.pop(connection[0])
-        for i, resource in enumerate(self.right):
-            resource[0] = i
+    def remove_right(self, connection_id: int = None):
+        is_found_connection = False
+        to_be_removed: ConnectionInfo | None = None
+        for connection in self.right:
+            if connection.id == connection_id:
+                connection.set_box_id(None)
+                to_be_removed = connection
+                is_found_connection = True
+            elif is_found_connection:  # same as in Resource class
+                connection.index -= 1
+        if to_be_removed is not None:
+            self.right.remove(to_be_removed)
 
-    def remove_left_inner(self, connection=None):
-        self.left_inner.pop(connection[0])
-        for i, resource in enumerate(self.left_inner):
-            resource[0] = i
+    def remove_left_inner(self, connection_id: int = None):
+        is_found_connection = False
+        to_be_removed: ConnectionInfo | None = None
+        for connection in self.left_inner:
+            if connection.id == connection_id:
+                connection.set_box_id(None)
+                to_be_removed = connection
+                is_found_connection = True
+            elif is_found_connection:  # same as in Resource class
+                connection.index -= 1
+        if to_be_removed is not None:
+            self.left_inner.remove(to_be_removed)
 
-    def remove_right_inner(self, connection=None):
-        self.right_inner.pop(connection[0])
-        for i, resource in enumerate(self.right_inner):
-            resource[0] = i
+    def remove_right_inner(self, connection_id: int = None):
+        is_found_connection = False
+        to_be_removed: ConnectionInfo | None = None
+        for connection in self.right_inner:
+            if connection.id == connection_id:
+                connection.set_box_id(None)
+                to_be_removed = connection
+                is_found_connection = True
+            elif is_found_connection:  # same as in Resource class
+                connection.index -= 1
+        if to_be_removed is not None:
+            self.right_inner.remove(to_be_removed)
 
-    def remove_left_atomic(self, connection_id):
+    def remove_left_atomic(self, connection_id: int):
         self.left.pop(connection_id)
         for i, resource in enumerate(self.left):
-            resource[0] = i
+            resource.index = i
 
-    def remove_right_atomic(self, connection_id):
+    def remove_right_atomic(self, connection_id: int):
         self.right.pop(connection_id)
         for i, resource in enumerate(self.left):
-            resource[0] = i
+            resource.index = i
 
     def to_dict(self):
         return {
@@ -92,3 +185,6 @@ class Generator:
         box.right_inner = data.get("right_inner", [])
         box.operand = data.get("operand")
         return box
+
+    def __eq__(self, __value):
+        return isinstance(__value, type(self)) and __value.id == self.id

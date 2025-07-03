@@ -123,7 +123,7 @@ class Test(TestMainDiagram):
         self.assertEqual(expected, actual)
 
     def test__add_canvas__adds_new_canvas_to_canvasses_and_tree(self):
-        new_canvas = CustomCanvas(self.app, None, Receiver(), self.app, self.app.custom_canvas, False, id_=1)
+        new_canvas = CustomCanvas(self.app, self.app, id_=1)
         self.app.add_canvas(new_canvas)
 
         expected_size = 2
@@ -134,7 +134,7 @@ class Test(TestMainDiagram):
         self.assertTrue(self.app.canvasses[str(new_canvas_id)] == new_canvas)
 
     def test__switch_canvas__changes_custom_canvas(self):
-        new_canvas = CustomCanvas(self.app, None, Receiver(), self.app, self.app.custom_canvas, False, id_=1)
+        new_canvas = CustomCanvas(self.app, self.app, id_=1)
         self.app.add_canvas(new_canvas)
         self.app.switch_canvas(new_canvas)
 

@@ -3,6 +3,7 @@ import tkinter.messagebox
 from MVP.refactored.frontend.canvas_objects.box import Box
 from MVP.refactored.frontend.components.custom_canvas import CustomCanvas
 from MVP.refactored.frontend.canvas_objects.spider import Spider
+import constants as const
 
 
 class SearchAlgorithm:
@@ -13,7 +14,6 @@ class SearchAlgorithm:
         self.search_all_canvases = search_window.search_all_canvases.get()
         self.results = []
         self.result_objects = {}
-        self.wire_results = []
         self.wire_objects = {}
 
     def get_potential_results(self, searchable_objects, canvas_objects):
@@ -174,7 +174,7 @@ class SearchAlgorithm:
 
         for results in result_ids:
             self.highlight_results(results, canvas_objects)
-            self.highlight_wires(results, canvas_objects)
+            self.highlight_wires(results, canvas_objects, searchable_connections_dict)
 
         self.results = result_ids
         objects = {}
@@ -185,7 +185,7 @@ class SearchAlgorithm:
 
         return found
 
-    def highlight_wires(self, result_ids, canvas_objects):
+    def highlight_wires(self, result_ids, canvas_objects, searchable_connections_dict):
         canvases = self.canvas.main_diagram.canvasses.values() if self.search_all_canvases else [self.canvas]
         for canvas in canvases:
             for wire in canvas.wires:
@@ -204,11 +204,17 @@ class SearchAlgorithm:
                     continue
 
                 if start_index in result_ids and end_index in result_ids:
-                    wire.search_highlight_secondary()
-                    if tuple(result_ids) not in self.wire_objects:
-                        self.wire_objects[tuple(result_ids)] = [wire]
-                    else:
-                        self.wire_objects[tuple(result_ids)].append(wire)
+                    bad_wire = True
+                    search_start_index = result_ids.index(start_index)
+                    search_end_index = result_ids.index(end_index)
+                    if search_end_index in searchable_connections_dict[search_start_index][1]:
+                        bad_wire = False
+                    if not bad_wire:
+                        wire.search_highlight_secondary()
+                        if tuple(result_ids) not in self.wire_objects:
+                            self.wire_objects[tuple(result_ids)] = [wire]
+                        else:
+                            self.wire_objects[tuple(result_ids)].append(wire)
 
     @staticmethod
     def check_side_connections(canvas_objects, side_check, potential, connection_amount, searchable,
@@ -264,11 +270,11 @@ class SearchAlgorithm:
             right_wires = []
             if isinstance(curr_item, Box):
                 for connection in curr_item.connections:
-                    if connection.side == "left":
+                    if connection.side == const.LEFT:
                         index = SearchAlgorithm.get_item_index_from_connection(canvas_objects, connection,
                                                                                "start_connection")
                         left_wires.append(index)
-                    elif connection.side == "right":
+                    elif connection.side == const.RIGHT:
                         index = SearchAlgorithm.get_item_index_from_connection(canvas_objects, connection,
                                                                                "end_connection")
                         right_wires.append(index)

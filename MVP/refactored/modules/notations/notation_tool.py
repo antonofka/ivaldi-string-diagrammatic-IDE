@@ -1,5 +1,5 @@
-from MVP.refactored.modules.notations.hypergraph_notation.hypergraph_notation import HypergraphNotation
 from MVP.refactored.modules.notations.diagram_notation.diagram_notation import DiagramNotation
+from MVP.refactored.modules.notations.hypergraph_notation.hypergraph_notation import HypergraphNotation
 from MVP.refactored.modules.notations.pseudo_notation.pseudo_notation import PseudoNotation
 
 
@@ -23,9 +23,8 @@ def get_notations(canvas):
     hypergraph_notation = HypergraphNotation()
 
     # TODO add all different notations here
-    ...
+
     return {"Pseudo notation": pseudo.get_pseudo_notations(canvas),
-            # TODO add notations' method calls here to combine all to one dict
             "Diagram notation": diagram_notation.get_graph_string(),
             "Hypergraph notation": hypergraph_notation.get_all_hypergraph_notations(),
-            }
+    }

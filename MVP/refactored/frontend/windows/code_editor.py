@@ -1,4 +1,5 @@
 import json
+import os
 import tkinter as tk
 from tkinter import messagebox
 
@@ -6,11 +7,25 @@ import pygments.lexers
 from chlorophyll import CodeView
 
 from MVP.refactored.util.exporter.code_exporter import CodeExporter
-from constants import *
+import constants as const
 
 
 class CodeEditor:
+    """
+    `CodeEditor` is the class that holds the window for the code editor and its functions.
+
+    The editor itself is imported from `chlorophyll` package.
+    """
     def __init__(self, main_diagram, box=None, label=None, code=None, is_generated=False):
+        """
+        CodeEditor constructor.
+
+        :param main_diagram: MainDiagram object for accessing functions.
+        :param box: Box that the CodeEditor was opened from.
+        :param label: Label of the function.
+        :param code: Code that will be displayed upon opening CodeEditor.
+        :param is_generated: Boolean defining if the code inside CodeEditor is generated.
+        """
         self.main_diagram = main_diagram
         self.box = box
         if label:
@@ -23,11 +38,10 @@ class CodeEditor:
         self.window.protocol("WM_DELETE_WINDOW", self.confirm_exit)
         self.window.geometry("1000x750")
         self.code_view = CodeView(self.window, lexer=pygments.lexers.PythonLexer,
-                                  tab_width=4,
                                   font="Courier")
+        self.code_view.bind("<Tab>", lambda event: self.handle_tab())
 
         self.code_view.pack(fill=tk.BOTH, expand=True)
-        self.previous_text = ""
 
         self.save_as_button = tk.Button(
             self.code_view,
@@ -55,7 +69,7 @@ class CodeEditor:
             input_count = 0
             output_count = 0
             for i in self.box.connections:
-                if i.side == "left":
+                if i.side == const.LEFT:
                     param_list.append(f"x{input_count}")
                     input_count += 1
                 else:
@@ -79,6 +93,13 @@ class CodeEditor:
         self.code_exporter = CodeExporter(self)
 
     def generate_function_name_from_label(self):
+        """
+        Generate a name for the function preset.
+
+        Takes the Box label and generates a usable python function name.
+
+        :return: string of function name.
+        """
         base = self.box.label_text.strip()
         result = base
         for char in base:
@@ -91,28 +112,50 @@ class CodeEditor:
         return result.strip()
 
     def confirm_exit(self):
+        """
+        Ask user for exiting confirmation.
+
+        :return: None
+        """
         if messagebox.askokcancel("Warning", "Unsaved changes will be lost. Are you sure you want to exit?"):
             self.window.destroy()
 
     def save_handler(self, destroy=True):
-        if self.box:
-            self.save_to_file()
-            self.main_diagram.load_functions()
-            self.update_boxes()
-        else:
-            self.save_to_file()
-            self.main_diagram.load_functions()
+        """
+        Handle saving.
+
+        :param destroy: Specifies if the editor should be destroyed after saving.
+        :return: None
+        """
+        self.save_to_file()
+        self.main_diagram.load_functions()
+        self.update_boxes()
+        if self.main_diagram.manage_methods:
             self.main_diagram.manage_methods.add_methods()
         if destroy:
             self.window.destroy()
 
     def save_as(self):
+        """
+        Export code and save.
+
+        Activates exporting from CodeExporter and uses save.
+
+        :return: None
+        """
         self.code_exporter.export()
         self.save_handler(destroy=False)
 
     def save_to_file(self):
-        if os.stat(FUNCTIONS_CONF).st_size != 0:
-            with open(FUNCTIONS_CONF, "r+") as file:
+        """
+        Save code to json file.
+
+        Saves the code in the editor to the functions_conf.json file.
+
+        :return: None
+        """
+        if os.stat(const.FUNCTIONS_CONF).st_size != 0:
+            with open(const.FUNCTIONS_CONF, "r+") as file:
                 existing_json = json.load(file)
                 existing_json[self.label] = self.code_view.get('1.0', tk.END).strip()
                 json_object = json.dumps(existing_json, indent=4)
@@ -120,7 +163,7 @@ class CodeEditor:
                 file.truncate(0)
                 file.write(json_object)
         else:
-            with open(FUNCTIONS_CONF, "w") as file:
+            with open(const.FUNCTIONS_CONF, "w") as file:
                 json_object = json.dumps(
                     {f"{self.label}": self.code_view.get('1.0', tk.END).strip()},
                     indent=4
@@ -128,7 +171,27 @@ class CodeEditor:
                 file.write(json_object)
 
     def update_boxes(self):
-        for box in self.main_diagram.custom_canvas.boxes:
-            if box.label_text in self.box.label_text:
-                box.update_io()
-        self.main_diagram.label_content[self.label] = self.code_view.get('1.0', tk.END)
+        """
+        Update boxes in canvas.
+
+        Updates the inputs and outputs of Boxes on the canvas.
+
+        :return: None
+        """
+        from MVP.refactored.frontend.windows.main_diagram import MainDiagram
+        for canvas in self.main_diagram.canvasses.values():
+            for box in canvas.boxes:
+                if box.label_text == self.label:
+                    box.update_io()
+        MainDiagram.add_function(self.label, self.code_view.get('1.0', tk.END))
+
+    def handle_tab(self):
+        """
+        Tab press handler.
+
+        Inserts 4 spaces into code editor instead of tab character.
+
+        :return: "break" to prevent regular tab character from being added.
+        """
+        self.code_view.insert(tk.INSERT, " "*4)
+        return "break"
